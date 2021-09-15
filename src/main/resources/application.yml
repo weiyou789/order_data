@@ -1,0 +1,10 @@
+logging:
+  level:
+    com.hosjoy.order_data: debug
+
+server:
+  port: 40100
+
+spring:
+  profiles:
+    active: prod

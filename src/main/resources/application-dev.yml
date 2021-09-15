@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    order:
+      username: devuser
+      password: hoslocal@1228
+      jdbcUrl: jdbc:mysql://123.60.34.125:3306/hosjoy-b2b-order
+      driverClassName: com.mysql.cj.jdbc.Driver
+    payment:
+      username: devuser
+      password: hoslocal@1228
+      jdbcUrl: jdbc:mysql://123.60.34.125:3306/hosjoy-b2b-payment
+      driverClassName: com.mysql.cj.jdbc.Driver

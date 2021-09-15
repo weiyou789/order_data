@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hosjoy.order_data.modules.order_data.mapper.order.OrderDataMapper">
+    <select id="getMonthOrderBuyMem" resultType="com.hosjoy.order_data.modules.order_data.po.MonthOrderBuyMem">
+        SELECT DISTINCT member_code
+        FROM `t_child_order`
+        WHERE merchant_code = '1ed0528595197975fa72f5ec8f9e0c62'
+        AND child_order_status IN (20,30,40,60,70)
+        AND pay_time BETWEEN #{req.createTimeStart} AND #{req.createTimeEnd}
+        <if test="memberCodeList != null">
+            AND member_code IN
+            <foreach collection="memberCodeList" item="item" index="index" open="(" separator="," close=")">
+                #{item.memberCode}
+            </foreach>
+        </if>
+    </select>
+
+    <select id="getMonthGroupOrderBuyMem" resultType="com.hosjoy.order_data.modules.order_data.po.CurrentMonthGroupOrderBuyMem">
+        SELECT
+	        *
+        FROM
+            (
+                SELECT
+                    m AS currentMonth,
+                    JSON_ARRAYAGG( a.member_code ) AS currentMonthBuyMem,
+                    JSON_ARRAYAGG( IF ( c > 1, a.member_code, NULL ) ) AS currentMonthRepBuyMem,
+                    COUNT( c ) AS currentMonthBuyMemCount,
+                    COUNT( IF ( c > 1, 1, NULL ) ) AS currentMonthRepBuyMemCount,
+                    concat(
+                        round( COUNT( IF ( c > 1, 1, NULL ) ) / COUNT( c ) * 100, 2 ),
+                        '%'
+                    ) AS memRepBuyRate
+                FROM
+                    (
+                        SELECT
+                            DATE_FORMAT( pay_time, "%Y-%m" ) AS m,
+                            COUNT( member_code ) AS c,
+                            member_code
+                        FROM
+                            t_child_order
+                        WHERE
+                            child_order_status IN ( 20, 30, 40, 60, 70 )
+                            AND merchant_code = '1ed0528595197975fa72f5ec8f9e0c62'
+                        GROUP BY
+                            m,
+                            member_code
+                        ) a
+                GROUP BY
+                    m
+            ) AS ta
+        WHERE
+	        ta.currentMonth BETWEEN #{req.startMonth}
+	        AND #{req.endMonth}
+    </select>
+
+
+    <select id="getNextMonthGroupOrderBuyMem" resultType="com.hosjoy.order_data.modules.order_data.po.NextMonthGroupOrderBuyMem">
+        SELECT
+	        *
+        FROM
+            (
+            SELECT
+                DATE_FORMAT( t1.m, "%Y-%m" ) AS currentMonth,
+                JSON_ARRAYAGG( t1.member_code ) AS currentMonthBuyMem,
+                JSON_ARRAYAGG( t2.member_code ) AS nextMonthRepBuyMem,
+                COUNT( t1.member_code ) AS currentMemberCount,
+                COUNT( t2.member_code ) AS nextMonthRepBuyMemCount,
+                concat(round(COUNT( t2.member_code ) / COUNT( t1.member_code ) * 100, 2), '%') AS memRepBuyRate
+            FROM
+                (
+                    SELECT
+                        member_code,
+                        DATE_FORMAT( pay_time, "%Y-%m-%01" ) AS m
+                    FROM
+                        t_child_order
+                    WHERE
+                        child_order_status IN (20,30,40,60,70)
+                        AND merchant_code =  '1ed0528595197975fa72f5ec8f9e0c62'
+                    GROUP BY
+                        member_code,
+                        DATE_FORMAT( pay_time, "%Y-%m-%01" )
+                    ORDER BY
+                        member_code
+                    ) AS t1
+                    LEFT JOIN (
+                    SELECT
+                        member_code,
+                        DATE_FORMAT( pay_time, "%Y-%m-%01" ) AS m
+                    FROM
+                        t_child_order
+                    WHERE
+                        child_order_status IN (20,30,40,60,70)
+                        AND merchant_code = '1ed0528595197975fa72f5ec8f9e0c62'
+                    GROUP BY
+                        member_code,
+                        DATE_FORMAT( pay_time, "%Y-%m-%01" )
+                    ORDER BY
+                        member_code
+                    ) AS t2 ON t1.member_code = t2.member_code
+                    AND t1.m = DATE_SUB( t2.m, INTERVAL 1 MONTH )
+                GROUP BY
+                    t1.m
+            ) AS ta
+        WHERE
+	        ta.currentMonth BETWEEN #{req.startMonth}
+	        AND #{req.endMonth}
+    </select>
+
+</mapper>
